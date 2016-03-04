@@ -2,10 +2,12 @@
 import codecs
 import requests
 import json
-from bs4 import *
 import re
 import time
 import settings
+from datetime import datetime
+
+from bs4 import *
 def id_from_url(url):
     return url.split("?")[0][1:]
 ####### Memory db
@@ -35,7 +37,7 @@ def get_all_friends(idlink,keep_to_visit=False):
             if "profile.php" not in friend.attrs['href']:
                 if keep_to_visit:
                     to_visit+=[id_from_url(friend.attrs['href'])]
-
+                add_user(id_from_url(friend.attrs['href']),friend.string)    
                 add_friend(idlink,id_from_url(friend.attrs['href']))
                 print(friend.encode('utf-8'))
 
@@ -79,7 +81,8 @@ for ftv in to_visit:
     get_all_friends(ftv)   
 
 ## https://www.youtube.com/watch?v=Y30CYfS080k but it works
-with codecs.open("output.gdf", "wb", encoding='utf-8') as file:
+output_file_name = "{}-{}.gdf".format(settings.URL_NAME,datetime.today().isoformat().replace(':',''))
+with codecs.open(output_file_name, "wb", encoding='utf-8') as file:
     file.write('nodedef>name VARCHAR,label VARCHAR\n')
     for u in user_data:
         file.write("{},{}\n".format(u,user_data[u]))
