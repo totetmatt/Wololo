@@ -46,7 +46,7 @@ def get_all_friends(idlink,keep_to_visit=False):
         if next_url:
             next_url = next_url.find('a').attrs['href']
             next_url ='https://m.facebook.com{}'.format(next_url)
-        time.sleep(1)
+        time.sleep(randint(1,8))
 
 ###### Seriousness begin here
 
