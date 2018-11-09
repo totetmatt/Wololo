@@ -13,31 +13,40 @@ def id_from_url(url):
 ####### Memory db
 
 to_visit = []
-network = []
+network = set()
 user_data = {}
 ####### Methods
-def add_user(id,name):
+def add_user(id,name,kwargs):
     global user_data
-    user_data[id]=name
+    user_data[id]={'name':name,**kwargs}
 def add_friend(source,target):
     global network
     edge = "{source},{target}".format(source=source,target=target)
-    network+=[edge]
+    network.add(edge)
 def get_all_friends(idlink,keep_to_visit=False):
     global to_visit
     next_url = 'https://m.facebook.com/{idlink}/friends?all=1'.format(idlink=idlink)
-
     while next_url:
     
         f = session.get(next_url)
         fsoup = BeautifulSoup(f.content,'html5lib') 
         source = fsoup.find('title').string
-        add_user(idlink,source)
+        add_user(idlink,source,{"type":"friend_of_friend"})
         for friend in fsoup.find_all('a',{"class":re.compile('(cc)|(cf)|(bo)|(bl)')}):
-            if "profile.php" not in friend.attrs['href']:
+            if "profile.php" not in friend.attrs['href']  \
+            and "/friends/" not in friend.attrs['href']  \
+            and "accesskey" not in friend.attrs \
+            and "/a/" not in friend.attrs['href'] \
+            and "logout.php" not in friend.attrs['href'] \
+            and "language.php" not in friend.attrs['href'] \
+            and "/pages/" not in friend.attrs['href']   \
+            and "/bugnub/" not in friend.attrs['href']   :
                 if keep_to_visit:
                     to_visit+=[id_from_url(friend.attrs['href'])]
-                add_user(id_from_url(friend.attrs['href']),friend.string)    
+                    
+                    add_user(id_from_url(friend.attrs['href']),friend.string,{"type":"friend_of_friend"})    
+                else:
+                    add_user(id_from_url(friend.attrs['href']),friend.string,{"type":"friend_of_friend"})    
                 add_friend(idlink,id_from_url(friend.attrs['href']))
                 print(friend.encode('utf-8'))
 
@@ -46,7 +55,7 @@ def get_all_friends(idlink,keep_to_visit=False):
         if next_url:
             next_url = next_url.find('a').attrs['href']
             next_url ='https://m.facebook.com{}'.format(next_url)
-        time.sleep(randint(1,8))
+        time.sleep(1)
 
 ###### Seriousness begin here
 
@@ -80,12 +89,16 @@ get_all_friends(settings.URL_NAME,keep_to_visit=True)
 for ftv in to_visit:
     get_all_friends(ftv)   
 
+
+for u in to_visit:
+    user_data[u]['type'] = "direct_friend"
+user_data[settings.URL_NAME]['type'] = "me"
 ## https://www.youtube.com/watch?v=Y30CYfS080k but it works
 output_file_name = "{}-{}.gdf".format(settings.URL_NAME,datetime.today().isoformat().replace(':',''))
 with codecs.open(output_file_name, "wb", encoding='utf-8') as file:
-    file.write('nodedef>name VARCHAR,label VARCHAR\n')
+    file.write('nodedef>name VARCHAR,label VARCHAR,type VARCHAR\n')
     for u in user_data:
-        file.write("{},{}\n".format(u,user_data[u]))
+        file.write("{},{},{}\n".format(u,user_data[u]['name'],user_data[u]['type']))
     file.write('edgedef>node1 VARCHAR,node2 VARCHAR\n')
     for n in network:
         file.write("{}\n".format(n))
