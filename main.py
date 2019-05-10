@@ -26,21 +26,16 @@ def add_friend(source,target):
 def get_all_friends(idlink,keep_to_visit=False):
     global to_visit
     next_url = 'https://m.facebook.com/{idlink}/friends?all=1'.format(idlink=idlink)
+    print(next_url)
+
     while next_url:
     
         f = session.get(next_url)
         fsoup = BeautifulSoup(f.content,'html5lib') 
         source = fsoup.find('title').string
         add_user(idlink,source,{"type":"friend_of_friend"})
-        for friend in fsoup.find_all('a',{"class":re.compile('(cc)|(cf)|(bo)|(bl)')}):
-            if "profile.php" not in friend.attrs['href']  \
-            and "/friends/" not in friend.attrs['href']  \
-            and "accesskey" not in friend.attrs \
-            and "/a/" not in friend.attrs['href'] \
-            and "logout.php" not in friend.attrs['href'] \
-            and "language.php" not in friend.attrs['href'] \
-            and "/pages/" not in friend.attrs['href']   \
-            and "/bugnub/" not in friend.attrs['href']   :
+        for friend in fsoup.find_all('a'):
+            if "fref" in friend.attrs['href'] :
                 if keep_to_visit:
                     to_visit+=[id_from_url(friend.attrs['href'])]
                     
@@ -73,9 +68,9 @@ for inp in soup.find_all('input'):
 data_login['email'] = settings.EMAIL
 data_login['pass']  = settings.PASSWORD
 post_url = soup.find('form').attrs['action']
-
+print(post_url)
 # Should login !
-r = session.post(post_url, data=data_login)
+r = session.post('https://m.facebook.com'+post_url, data=data_login)
 rsoup = BeautifulSoup(r.content,"html5lib")
 
 #can't properly guess the user name, that's why it's needed to fill this info by hand
