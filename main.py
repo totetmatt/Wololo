@@ -5,6 +5,8 @@ import json
 import re
 import time
 import settings
+
+import getpass
 from datetime import datetime
 
 from bs4 import *
@@ -53,47 +55,53 @@ def get_all_friends(idlink,keep_to_visit=False):
         time.sleep(1)
 
 ###### Seriousness begin here
+if __name__ == "__main__":
+    email = input_var = input("Email: ")
+    password = getpass.getpass(prompt="Password: ",stream=None)
+    # Open a session
+    session = requests.Session()
+    req = session.get('https://m.facebook.com')
+    soup = BeautifulSoup(req.content,'html5lib')
 
-# Open a session
-session = requests.Session()
-req = session.get('https://m.facebook.com')
-soup = BeautifulSoup(req.content,'html5lib')
+    # Get all parameter needed 
+    data_login = {}
+    for inp in soup.find_all('input'):
+        inpd = inp
+        if 'value' in inpd.attrs:
+            data_login[inpd.attrs['name']] = inpd['value']
+    data_login['email'] = email
+    data_login['pass']  = password
+    post_url = soup.find('form').attrs['action']
+    print(post_url)
+    # Should login !
+    r = session.post('https://m.facebook.com'+post_url, data=data_login)
+    rsoup = BeautifulSoup(r.content,"html5lib")
+    
+    print(r.headers.items())
+    print(rsoup.find_all("a"))
+    exit()
 
-# Get all parameter needed 
-data_login = {}
-for inp in soup.find_all('input'):
-    inpd = inp
-    if 'value' in inpd.attrs:
-        data_login[inpd.attrs['name']] = inpd['value']
-data_login['email'] = settings.EMAIL
-data_login['pass']  = settings.PASSWORD
-post_url = soup.find('form').attrs['action']
-print(post_url)
-# Should login !
-r = session.post('https://m.facebook.com'+post_url, data=data_login)
-rsoup = BeautifulSoup(r.content,"html5lib")
+    #can't properly guess the user name, that's why it's needed to fill this info by hand
+    print(settings.URL_NAME)
 
-#can't properly guess the user name, that's why it's needed to fill this info by hand
-print(settings.URL_NAME)
+    # First round to get friends and keep them to see in future
+    get_all_friends(settings.URL_NAME,keep_to_visit=True)
 
-# First round to get friends and keep them to see in future
-get_all_friends(settings.URL_NAME,keep_to_visit=True)
-
-# For all friends, check friends
-# Friendception
-for ftv in to_visit:
-    get_all_friends(ftv)   
+    # For all friends, check friends
+    # Friendception
+    for ftv in to_visit:
+        get_all_friends(ftv)   
 
 
-for u in to_visit:
-    user_data[u]['type'] = "direct_friend"
-user_data[settings.URL_NAME]['type'] = "me"
-## https://www.youtube.com/watch?v=Y30CYfS080k but it works
-output_file_name = "{}-{}.gdf".format(settings.URL_NAME,datetime.today().isoformat().replace(':',''))
-with codecs.open(output_file_name, "wb", encoding='utf-8') as file:
-    file.write('nodedef>name VARCHAR,label VARCHAR,type VARCHAR\n')
-    for u in user_data:
-        file.write("{},{},{}\n".format(u,user_data[u]['name'],user_data[u]['type']))
-    file.write('edgedef>node1 VARCHAR,node2 VARCHAR\n')
-    for n in network:
-        file.write("{}\n".format(n))
+    for u in to_visit:
+        user_data[u]['type'] = "direct_friend"
+    user_data[settings.URL_NAME]['type'] = "me"
+    ## https://www.youtube.com/watch?v=Y30CYfS080k but it works
+    output_file_name = "{}-{}.gdf".format(settings.URL_NAME,datetime.today().isoformat().replace(':',''))
+    with codecs.open(output_file_name, "wb", encoding='utf-8') as file:
+        file.write('nodedef>name VARCHAR,label VARCHAR,type VARCHAR\n')
+        for u in user_data:
+            file.write("{},{},{}\n".format(u,user_data[u]['name'],user_data[u]['type']))
+        file.write('edgedef>node1 VARCHAR,node2 VARCHAR\n')
+        for n in network:
+            file.write("{}\n".format(n))
