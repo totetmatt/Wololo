@@ -4,7 +4,6 @@ import requests
 import json
 import re
 import time
-import settings
 
 import getpass
 from datetime import datetime
@@ -37,7 +36,7 @@ def get_all_friends(idlink,keep_to_visit=False):
         source = fsoup.find('title').string
         add_user(idlink,source,{"type":"friend_of_friend"})
         for friend in fsoup.find_all('a'):
-            if "fref" in friend.attrs['href'] :
+            if "fref" in friend.attrs['href'] and "profile.php" not in friend.attrs['href']:
                 if keep_to_visit:
                     to_visit+=[id_from_url(friend.attrs['href'])]
                     
@@ -56,7 +55,8 @@ def get_all_friends(idlink,keep_to_visit=False):
 
 ###### Seriousness begin here
 if __name__ == "__main__":
-    email = input_var = input("Email: ")
+    email = input("Email: ")
+    url_name = input("Your id (go to your profile page and get https://www.facebook.com/<GET_WHAT_IS_HERE> :")
     password = getpass.getpass(prompt="Password: ",stream=None)
     # Open a session
     session = requests.Session()
@@ -79,13 +79,13 @@ if __name__ == "__main__":
     
     print(r.headers.items())
     print(rsoup.find_all("a"))
-    exit()
+
 
     #can't properly guess the user name, that's why it's needed to fill this info by hand
-    print(settings.URL_NAME)
+    print(url_name)
 
     # First round to get friends and keep them to see in future
-    get_all_friends(settings.URL_NAME,keep_to_visit=True)
+    get_all_friends(url_name,keep_to_visit=True)
 
     # For all friends, check friends
     # Friendception
@@ -95,9 +95,9 @@ if __name__ == "__main__":
 
     for u in to_visit:
         user_data[u]['type'] = "direct_friend"
-    user_data[settings.URL_NAME]['type'] = "me"
+    user_data[url_name]['type'] = "me"
     ## https://www.youtube.com/watch?v=Y30CYfS080k but it works
-    output_file_name = "{}-{}.gdf".format(settings.URL_NAME,datetime.today().isoformat().replace(':',''))
+    output_file_name = "{}-{}.gdf".format(url_name,datetime.today().isoformat().replace(':',''))
     with codecs.open(output_file_name, "wb", encoding='utf-8') as file:
         file.write('nodedef>name VARCHAR,label VARCHAR,type VARCHAR\n')
         for u in user_data:
